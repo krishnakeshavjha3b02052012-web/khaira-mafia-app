@@ -1,144 +1,384 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="container-fluid py-2">
-    <div class="row g-2" style="height: 82vh;">
-        <!-- Sidebar User List -->
-        <div class="col-md-4 col-lg-3 bg-dark border border-secondary rounded p-3 overflow-auto">
-            <h5 class="text-warning mb-3"><i class="bi bi-chat-square-text-fill"></i> Members</h5>
-            <div class="list-group">
-                {% for u in users %}
-                    <a href="{{ url_for('private_chat', user_id=u.id) }}" class="list-group-item list-group-item-action bg-dark text-light border-secondary d-flex justify-content-between align-items-center {% if active_recipient and active_recipient.id == u.id %}active bg-secondary{% endif %}">
-                        <span><i class="bi bi-person-circle text-info me-2"></i>{{ u.username }}</span>
-                        <i class="bi bi-chevron-right small text-muted"></i>
-                    </a>
-                {% endfor %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Messages | Khaira Mafia HQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b0c10;
+            --panel-bg: #1f2833;
+            --accent-cyan: #66fcf1;
+            --accent-teal: #45a29e;
+            --text-muted: #c5c6c7;
+            --border-color: rgba(69, 162, 158, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .dm-layout {
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Styling */
+        .sidebar-pane {
+            width: 360px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-box {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-box .form-control {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 20px;
+            padding-left: 35px;
+            font-size: 0.88rem;
+        }
+
+        .search-box .form-control:focus {
+            background-color: var(--bg-dark);
+            color: #fff;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(102, 252, 241, 0.3);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 28px;
+            top: 23px;
+            color: var(--accent-teal);
+            font-size: 0.85rem;
+        }
+
+        .member-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .member-card {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            text-decoration: none;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .member-card:hover {
+            background-color: rgba(69, 162, 158, 0.1);
+            color: #fff;
+        }
+
+        .member-card.active {
+            background-color: rgba(102, 252, 241, 0.15);
+            border-left: 4px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            margin-right: 14px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-teal);
+            object-fit: cover;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #2ec4b6;
+            border: 2px solid var(--panel-bg);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 2px;
+            right: 0;
+        }
+
+        .member-info h6 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .member-info small {
+            font-size: 0.78rem;
+            color: #8892b0;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        /* Chat Pane Styling */
+        .chat-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+        }
+
+        .chat-header {
+            padding: 15px 24px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header .active-user {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .message-row {
+            display: flex;
+            flex-direction: column;
+            max-width: 65%;
+        }
+
+        .message-row.sent {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message-row.received {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .message-bubble {
+            padding: 12px 18px;
+            border-radius: 18px;
+            font-size: 0.93rem;
+            line-height: 1.45;
+            word-wrap: break-word;
+        }
+
+        .sent .message-bubble {
+            background-color: var(--accent-teal);
+            color: #0b0c10;
+            font-weight: 500;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 3px 10px rgba(69, 162, 158, 0.2);
+        }
+
+        .received .message-bubble {
+            background-color: var(--panel-bg);
+            color: #ffffff;
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: #8892b0;
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+
+        .chat-footer {
+            padding: 16px 24px;
+            background-color: var(--panel-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .input-group .form-control {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 25px 0 0 25px;
+            padding: 12px 20px;
+        }
+
+        .input-group .form-control:focus {
+            background-color: var(--bg-dark);
+            color: #fff;
+            border-color: var(--accent-cyan);
+            box-shadow: none;
+        }
+
+        .btn-send {
+            background-color: var(--accent-cyan);
+            color: var(--bg-dark);
+            border-radius: 0 25px 25px 0;
+            padding: 0 24px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .btn-send:hover {
+            background-color: #45a29e;
+            color: #fff;
+        }
+
+        .empty-state {
+            margin: auto;
+            text-align: center;
+            color: #8892b0;
+        }
+
+        .empty-state i {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            color: var(--accent-teal);
+        }
+    </style>
+</head>
+<body>
+
+<div class="dm-layout">
+    <!-- Sidebar: Members List -->
+    <div class="sidebar-pane">
+        <div class="sidebar-header">
+            <h5 class="m-0 text-info fw-bold"><i class="fa-solid fa-comments me-2"></i>Direct Messages</h5>
+            <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-info" title="Return to Portal">
+                <i class="fa-solid fa-house"></i>
+            </a>
+        </div>
+
+        <div class="search-box position-relative">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="memberSearch" class="form-control" placeholder="Search members..." onkeyup="filterMembers()">
+        </div>
+
+        <div class="member-list" id="memberList">
+            {% for u in users %}
+            <a href="{{ url_for('private_chat', user_id=u.id) }}" class="member-card {% if active_recipient and active_recipient.id == u.id %}active{% endif %}">
+                <div class="avatar-wrapper">
+                    <img src="{{ u.pfp_url }}" class="avatar" alt="{{ u.username }}">
+                    <div class="status-dot"></div>
+                </div>
+                <div class="member-info">
+                    <h6>{{ u.username }}</h6>
+                    <small><i class="fa-solid fa-location-dot me-1"></i>{{ u.address if u.address else 'HQ Base' }}</small>
+                </div>
+            </a>
+            {% else %}
+            <div class="p-4 text-center text-muted small">No other members registered.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right Pane: Direct Chat Interface -->
+    <div class="chat-pane">
+        {% if active_recipient %}
+        <div class="chat-header">
+            <div class="active-user">
+                <div class="avatar-wrapper">
+                    <img src="{{ active_recipient.pfp_url }}" class="avatar" alt="{{ active_recipient.username }}">
+                    <div class="status-dot"></div>
+                </div>
+                <div>
+                    <h6 class="m-0 text-info fw-bold">{{ active_recipient.username }}</h6>
+                    <small class="text-muted"><i class="fa-solid fa-location-dot me-1"></i>{{ active_recipient.address if active_recipient.address else 'HQ Base' }}</small>
+                </div>
+            </div>
+            <div>
+                <a href="{{ url_for('members') }}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-users me-1"></i> Roster</a>
             </div>
         </div>
 
-        <!-- Direct Message Window -->
-        <div class="col-md-8 col-lg-9 d-flex flex-column bg-dark border border-secondary rounded p-3">
-            {% if active_recipient %}
-                <div class="pb-2 mb-3 border-bottom border-secondary d-flex align-items-center justify-content-between">
-                    <h5 class="text-info m-0"><i class="bi bi-person-fill text-warning"></i> {{ active_recipient.username }}</h5>
-                    <span class="badge bg-success"><i class="bi bi-shield-check"></i> Encrypted Direct Channel</span>
+        <div class="chat-messages" id="chatContainer">
+            {% for msg in messages %}
+            <div class="message-row {% if msg.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                <div class="message-bubble">
+                    {{ msg.content }}
                 </div>
-
-                <!-- Chat Feed -->
-                <div class="flex-grow-1 overflow-auto d-flex flex-column mb-3 p-2 border border-secondary rounded bg-black bg-opacity-25" id="chatFeed">
-                    {% for msg in messages %}
-                        <div class="chat-bubble {% if msg.sender_id == current_user.id %}chat-bubble-sent{% else %}chat-bubble-received{% endif %}">
-                            <div class="small fw-bold text-warning mb-1">{{ msg.sender.username }}</div>
-                            <div>
-                                {% if msg.content.startswith('data:image') or msg.content.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
-                                    <img src="{{ msg.content }}" class="img-fluid rounded my-1" style="max-height: 250px;">
-                                {% elif msg.content.startswith('data:audio') %}
-                                    <audio controls class="w-100 my-1"><source src="{{ msg.content }}"></audio>
-                                {% else %}
-                                    {{ msg.content }}
-                                {% endif %}
-                            </div>
-                            <div class="text-end text-white-50" style="font-size: 0.7rem;">{{ msg.timestamp.strftime('%H:%M') if msg.timestamp else '' }}</div>
-                        </div>
-                    {% endfor %}
-                </div>
-
-                <!-- WhatsApp-Style Media Toolbar & Form -->
-                <emoji-picker id="emojiPicker"></emoji-picker>
-
-                <form action="{{ url_for('private_chat', user_id=active_recipient.id) }}" method="POST" id="dmForm">
-                    <div class="input-group gap-1">
-                        <button class="btn btn-outline-secondary text-light" type="button" id="emojiBtn"><i class="bi bi-emoji-smile-fill text-warning"></i></button>
-                        <button class="btn btn-outline-secondary text-light" type="button" onclick="document.getElementById('fileInput').click()"><i class="bi bi-paperclip text-info"></i></button>
-                        <button class="btn btn-outline-secondary text-light" type="button" id="gifBtn"><i class="bi bi-filetype-gif text-success"></i></button>
-                        <button class="btn btn-outline-danger" type="button" id="recordBtn"><i class="bi bi-mic-fill"></i></button>
-                        
-                        <input type="file" id="fileInput" style="display: none;" accept="image/*">
-                        <input type="text" name="message" id="messageInput" class="form-control bg-dark text-light border-secondary" placeholder="Type a message..." autocomplete="off">
-                        <button class="btn btn-info fw-bold" type="submit"><i class="bi bi-send-fill"></i></button>
-                    </div>
-                </form>
+                <span class="message-time">{{ msg.timestamp.strftime('%H:%M') }}</span>
+            </div>
             {% else %}
-                <div class="text-center my-auto text-muted">
-                    <i class="bi bi-chat-left-dots display-1"></i>
-                    <p class="mt-2">Select a member from the sidebar to start direct messaging.</p>
-                </div>
-            {% endif %}
+            <div class="empty-state">
+                <i class="fa-regular fa-paper-plane"></i>
+                <h5 class="text-light fw-bold">No messages yet</h5>
+                <p class="small">Send a direct message to begin your conversation with {{ active_recipient.username }}.</p>
+            </div>
+            {% endfor %}
         </div>
+
+        <div class="chat-footer">
+            <form action="{{ url_for('private_chat', user_id=active_recipient.id) }}" method="POST">
+                <div class="input-group">
+                    <input type="text" name="message" class="form-control" placeholder="Type your message..." required autocomplete="off" autofocus>
+                    <button type="submit" class="btn btn-send"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fa-solid fa-comments"></i>
+            <h4 class="text-light fw-bold">Select a Member</h4>
+            <p>Choose a team member from the left menu to open direct messages.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 
 <script>
-    // Auto-scroll chat feed to bottom
-    const chatFeed = document.getElementById('chatFeed');
-    if (chatFeed) chatFeed.scrollTop = chatFeed.scrollHeight;
-
-    // Emoji Picker Toggle
-    const emojiBtn = document.getElementById('emojiBtn');
-    const emojiPicker = document.getElementById('emojiPicker');
-    const messageInput = document.getElementById('messageInput');
-    if (emojiBtn) {
-        emojiBtn.addEventListener('click', () => {
-            emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
-        });
-        emojiPicker.addEventListener('emoji-click', event => {
-            messageInput.value += event.detail.unicode;
-        });
+    // Auto-scroll chat container to the bottom on load
+    const chatContainer = document.getElementById('chatContainer');
+    if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Attachment Image Handling (Converts image to Base64)
-    const fileInput = document.getElementById('fileInput');
-    if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    messageInput.value = evt.target.result;
-                    document.getElementById('dmForm').submit();
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
+    // Client-side member search filter
+    function filterMembers() {
+        const input = document.getElementById('memberSearch').value.toLowerCase();
+        const cards = document.querySelectorAll('.member-card');
 
-    // GIF Quick Picker Prompt
-    const gifBtn = document.getElementById('gifBtn');
-    if (gifBtn) {
-        gifBtn.addEventListener('click', () => {
-            const gifUrl = prompt("Enter GIF Image URL:");
-            if (gifUrl) {
-                messageInput.value = gifUrl;
-                document.getElementById('dmForm').submit();
-            }
-        });
-    }
-
-    // Voice Note Recorder (MediaRecorder Web API)
-    const recordBtn = document.getElementById('recordBtn');
-    let mediaRecorder, audioChunks = [];
-    if (recordBtn) {
-        recordBtn.addEventListener('click', async () => {
-            if (!mediaRecorder || mediaRecorder.state === "inactive") {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                audioChunks = [];
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const reader = new FileReader();
-                    reader.onload = function(evt) {
-                        messageInput.value = evt.target.result;
-                        document.getElementById('dmForm').submit();
-                    };
-                    reader.readAsDataURL(audioBlob);
-                };
-                mediaRecorder.start();
-                recordBtn.classList.replace('btn-outline-danger', 'btn-danger');
+        cards.forEach(card => {
+            const username = card.querySelector('h6').textContent.toLowerCase();
+            const address = card.querySelector('small').textContent.toLowerCase();
+            if (username.includes(input) || address.includes(input)) {
+                card.style.display = 'flex';
             } else {
-                mediaRecorder.stop();
-                recordBtn.classList.replace('btn-danger', 'btn-outline-danger');
+                card.style.display = 'none';
             }
         });
     }
 </script>
-{% endblock %}
+</body>
+</html>
