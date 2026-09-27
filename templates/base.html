@@ -6,13 +6,21 @@
     <title>Khaira Mafia Hub</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Grandstander:wght@500&family=Inter:wght@400;600;700&family=Playfair+Display:ital@0;1&family=Poppins:wght@600;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+    <!-- Emoji Picker Element -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.21.0/index.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0b0e14; color: #f8f9fa; }
         h1, h2, h3, .navbar-brand { font-family: 'Poppins', sans-serif; }
+        .chat-bubble { max-width: 75%; border-radius: 15px; padding: 10px 15px; margin-bottom: 10px; }
+        .chat-bubble-sent { background-color: #056162; color: #fff; align-self: flex-end; }
+        .chat-bubble-received { background-color: #262d31; color: #fff; align-self: flex-start; }
+        emoji-picker { position: absolute; bottom: 80px; right: 20px; z-index: 1000; display: none; }
     </style>
 </head>
 <body>
@@ -21,18 +29,20 @@
             <a class="navbar-brand text-warning fw-bold" href="{{ url_for('index') }}">🎩 Khaira Mafia</a>
             
             {% if current_user.is_authenticated %}
-            <!-- Mobile Hamburger Toggle Button -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <!-- Collapsible Navigation Menu -->
             <div class="collapse navbar-collapse" id="navbarContent">
                 <ul class="navbar-nav ms-auto align-items-lg-center gap-2 py-2 py-lg-0">
-                    <li class="nav-item"><a class="nav-link text-info fw-bold" href="{{ url_for('index') }}">🤖 AI Assistant</a></li>
-                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('poker') }}">♠️ Poker Lounge</a></li>
-                    <li class="nav-item"><a class="nav-link text-success fw-bold" href="{{ url_for('ludo') }}">🎲 Ludo Arena</a></li>
-                    <li class="nav-item"><a class="nav-link text-light fw-bold" href="{{ url_for('dm_inbox') }}">🔒 1-on-1 DM</a></li>
+                    <li class="nav-item"><a class="nav-link text-info fw-bold" href="{{ url_for('index') }}"><i class="bi bi-robot"></i> AI Assistant</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('poker') }}"><i class="bi bi-suit-spade-fill"></i> Poker</a></li>
+                    <li class="nav-item"><a class="nav-link text-success fw-bold" href="{{ url_for('ludo') }}"><i class="bi bi-dice-6-fill"></i> Ludo</a></li>
+                    <li class="nav-item"><a class="nav-link text-light fw-bold" href="{{ url_for('dm_inbox') }}"><i class="bi bi-chat-dots-fill"></i> 1-on-1 DM</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="{{ url_for('group_chat') }}"><i class="bi bi-people-fill"></i> HQ Chat</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary fw-bold" href="{{ url_for('commands') }}"><i class="bi bi-terminal-fill"></i> Commands</a></li>
+                    <li class="nav-item"><a class="nav-link text-info fw-bold" href="{{ url_for('calendar') }}"><i class="bi bi-calendar-event-fill"></i> Calendar</a></li>
+                    <li class="nav-item"><a class="nav-link text-danger fw-bold" href="{{ url_for('group_call') }}"><i class="bi bi-telephone-fill"></i> Call Room</a></li>
                     <li class="nav-item ms-lg-2"><a class="btn btn-outline-danger btn-sm w-100 w-lg-auto" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </div>
@@ -44,7 +54,7 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Bootstrap 5 JavaScript Bundle (Required for Mobile Hamburger Toggle) -->
+    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
