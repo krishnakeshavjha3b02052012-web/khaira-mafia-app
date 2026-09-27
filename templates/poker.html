@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .poker-container { background-color: #0d1117; min-height: 85vh; border-radius: 15px; padding: 20px; }
+    .poker-table { background: radial-gradient(circle, #1e7039 0%, #0d421d 80%, #06220e 100%); border: 15px solid #4a2c11; border-radius: 200px; min-height: 480px; position: relative; }
+    .card-slot { display: inline-block; width: 55px; height: 80px; background: #fff; border-radius: 6px; color: #000; font-weight: bold; font-size: 1.2rem; text-align: center; line-height: 80px; margin: 3px; }
+    .card-red { color: #d9534f; }
+    .card-back { background: linear-gradient(135deg, #b30000 25%, #800000 100%); border: 2px solid #fff; color: transparent; }
+</style>
+<div class="container-fluid poker-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-warning mb-0">♠️ Khaira Mafia Poker Lounge</h3>
+        <div class="bg-dark p-2 rounded border border-warning"><span>Bankroll: <strong id="player-chips" class="text-warning">$1,000</strong></span></div>
+    </div>
+    <div class="poker-table d-flex flex-column justify-content-between p-4 my-3 text-center">
+        <div>
+            <span class="badge bg-danger mb-2">Dealer Bot</span>
+            <div><div id="bot-card-1" class="card-slot card-back">?</div><div id="bot-card-2" class="card-slot card-back">?</div></div>
+        </div>
+        <div class="my-3">
+            <div class="text-info fw-bold mb-1">TOTAL POT: $<span id="pot-amount">0</span></div>
+            <div id="community-cards">
+                <div class="card-slot opacity-50">?</div><div class="card-slot opacity-50">?</div><div class="card-slot opacity-50">?</div><div class="card-slot opacity-50">?</div><div class="card-slot opacity-50">?</div>
+            </div>
+        </div>
+        <div>
+            <div><div id="player-card-1" class="card-slot">?</div><div id="player-card-2" class="card-slot">?</div></div>
+            <span class="badge bg-warning text-dark mt-2">{{ current_user.username }} (You)</span>
+        </div>
+    </div>
+    <div class="card bg-dark border-secondary p-3">
+        <div class="row align-items-center text-center g-2">
+            <div class="col-md-3"><button id="btn-deal" class="btn btn-warning w-100 fw-bold" onclick="startNewHand()">🎴 Deal ($50 Blind)</button></div>
+            <div class="col-md-2"><button id="btn-check" class="btn btn-outline-info w-100" onclick="playerAction('check')" disabled>Check/Call</button></div>
+            <div class="col-md-2"><button id="btn-raise" class="btn btn-outline-success w-100" onclick="playerAction('raise')" disabled>Raise ($100)</button></div>
+            <div class="col-md-2"><button id="btn-fold" class="btn btn-outline-danger w-100" onclick="playerAction('fold')" disabled>Fold</button></div>
+            <div class="col-md-3"><div id="game-status" class="text-warning fw-bold">Press 'Deal' to start.</div></div>
+        </div>
+    </div>
+</div>
+<script>
+    const suits = ['♠', '♥', '♦', '♣'], values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    let bankroll = 1000, pot = 0, gameStage = 0, deck = [], playerHand = [], botHand = [], communityCards = [];
+    function buildDeck() { deck = []; for (let s of suits) for (let v of values) deck.push({ suit: s, value: v }); deck.sort(() => Math.random() - 0.5); }
+    function renderCard(card, elementId) { const el = document.getElementById(elementId); el.className = `card-slot ${(card.suit === '♥' || card.suit === '♦') ? 'card-red' : ''}`; el.innerText = card.value + card.suit; }
+    function startNewHand() {
+        if (bankroll < 50) bankroll = 1000;
+        buildDeck(); bankroll -= 50; pot = 100; gameStage = 1;
+        playerHand = [deck.pop(), deck.pop()]; botHand = [deck.pop(), deck.pop()]; communityCards = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+        document.getElementById('player-chips').innerText = `$${bankroll}`; document.getElementById('pot-amount').innerText = pot; document.getElementById('game-status').innerText = "Flop dealt.";
+        renderCard(playerHand[0], 'player-card-1'); renderCard(playerHand[1], 'player-card-2');
+        document.getElementById('bot-card-1').className = "card-slot card-back"; document.getElementById('bot-card-1').innerText = "?";
+        document.getElementById('bot-card-2').className = "card-slot card-back"; document.getElementById('bot-card-2').innerText = "?";
+        let commHtml = ''; for (let i = 0; i < 3; i++) commHtml += `<div class="card-slot ${(communityCards[i].suit==='♥'||communityCards[i].suit==='♦')?'card-red':''}">${communityCards[i].value}${communityCards[i].suit}</div>`;
+        commHtml += `<div class="card-slot opacity-50">?</div><div class="card-slot opacity-50">?</div>`;
+        document.getElementById('community-cards').innerHTML = commHtml;
+        document.getElementById('btn-check').disabled = false; document.getElementById('btn-raise').disabled = false; document.getElementById('btn-fold').disabled = false; document.getElementById('btn-deal').disabled = true;
+    }
+    function playerAction(action) {
+        if (action === 'fold') { document.getElementById('game-status').innerText = "Folded."; endHand(); return; }
+        if (action === 'raise') { bankroll -= 100; pot += 200; document.getElementById('player-chips').innerText = `$${bankroll}`; document.getElementById('pot-amount').innerText = pot; }
+        gameStage++;
+        if (gameStage === 2) renderCommunity(4);
+        else if (gameStage === 3) renderCommunity(5);
+        else if (gameStage >= 4) {
+            renderCard(botHand[0], 'bot-card-1'); renderCard(botHand[1], 'bot-card-2');
+            if (Math.random() > 0.45) { bankroll += pot; document.getElementById('game-status').innerText = `Won $${pot}!`; }
+            else { document.getElementById('game-status').innerText = "Dealer won."; }
+            endHand();
+        }
+    }
+    function renderCommunity(count) {
+        let commHtml = ''; for (let i = 0; i < 5; i++) {
+            if (i < count) commHtml += `<div class="card-slot ${(communityCards[i].suit==='♥'||communityCards[i].suit==='♦')?'card-red':''}">${communityCards[i].value}${communityCards[i].suit}</div>`;
+            else commHtml += `<div class="card-slot opacity-50">?</div>`;
+        }
+        document.getElementById('community-cards').innerHTML = commHtml;
+    }
+    function endHand() { document.getElementById('player-chips').innerText = `$${bankroll}`; document.getElementById('btn-check').disabled = true; document.getElementById('btn-raise').disabled = true; document.getElementById('btn-fold').disabled = true; document.getElementById('btn-deal').disabled = false; }
+</script>
+{% endblock %}

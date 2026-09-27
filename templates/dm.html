@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid" style="max-width: 1000px;">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary">
+                <div class="card-header border-secondary text-info fw-bold">👥 Direct Messages</div>
+                <div class="list-group list-group-flush bg-dark">
+                    {% for u in users %}
+                        <a href="{{ url_for('private_chat', user_id=u.id) }}" class="list-group-item list-group-item-action bg-dark text-light border-secondary d-flex justify-content-between align-items-center {% if active_recipient and active_recipient.id == u.id %}active bg-secondary{% endif %}">
+                            <div><strong>{{ u.username }}</strong><br><small class="text-muted">{{ u.role }}</small></div>
+                            <span class="badge bg-success rounded-circle p-1">●</span>
+                        </a>
+                    {% else %}
+                        <div class="p-3 text-muted">No other members online.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card bg-dark border-secondary">
+                {% if active_recipient %}
+                    <div class="card-header border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="mb-0 text-light">🔒 Chat with <span class="text-info">{{ active_recipient.username }}</span></h5>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="fontSelector" class="text-muted small fw-bold mb-0">Font:</label>
+                            <select id="fontSelector" class="form-select form-select-sm bg-dark text-warning border-secondary w-auto" onchange="changeGroupFont(this.value)">
+                                <option value="'Inter', sans-serif">Modern Sans</option>
+                                <option value="'Fira Code', monospace">Dev Monospace</option>
+                                <option value="'Playfair Display', serif">Classic Serif</option>
+                                <option value="'Grandstander', cursive">Casual Playful</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body overflow-auto p-3" id="chat-box" style="height: 420px; background-color: #121212;">
+                        {% for msg in messages %}
+                            <div class="d-flex justify-content-{% if msg.sender_id == current_user.id %}end{% else %}start{% endif %} mb-3">
+                                <div class="bg-{% if msg.sender_id == current_user.id %}primary{% else %}secondary{% endif %} text-white p-2 px-3 rounded-3" style="max-width: 75%;">
+                                    <div>{{ msg.content }}</div>
+                                    <div class="text-end" style="font-size: 0.7rem; opacity: 0.8;">{{ msg.timestamp.strftime('%H:%M') }}</div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted my-5">🔒 Encrypted Direct Channel Opened. Send a message to start conversation.</div>
+                        {% endfor %}
+                    </div>
+                    <div class="card-footer border-secondary">
+                        <form action="{{ url_for('private_chat', user_id=active_recipient.id) }}" method="POST">
+                            <div class="input-group">
+                                <input type="text" name="message" class="form-control bg-dark text-light border-secondary" placeholder="Type a private message..." required autocomplete="off">
+                                <button class="btn btn-info fw-bold" type="submit">Send 🔒</button>
+                            </div>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="card-body text-center text-muted my-5">👈 Select a member from the list to start a 1-on-1 private chat.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function changeGroupFont(selectedFont) {
+        const chatBox = document.getElementById('chat-box');
+        if (chatBox) chatBox.style.fontFamily = selectedFont;
+        localStorage.setItem('preferredGroupFont', selectedFont);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatBox = document.getElementById('chat-box');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+        const savedFont = localStorage.getItem('preferredGroupFont');
+        if (savedFont) {
+            if (document.getElementById('fontSelector')) document.getElementById('fontSelector').value = savedFont;
+            changeGroupFont(savedFont);
+        }
+    });
+</script>
+{% endblock %}

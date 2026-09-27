@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container" style="max-width: 400px;">
+    <div class="card bg-dark border-secondary p-4 mt-5">
+        <h3 class="text-info text-center mb-3">Register</h3>
+        <form method="POST">
+            <div class="mb-3"><input type="text" name="username" class="form-control bg-dark text-light border-secondary" placeholder="Username" required></div>
+            <div class="mb-3"><input type="password" name="password" class="form-control bg-dark text-light border-secondary" placeholder="Password" required></div>
+            <button class="btn btn-info w-100 fw-bold" type="submit">Register</button>
+        </form>
+        <div class="text-center mt-3"><a href="{{ url_for('login') }}" class="text-warning small">Already have an account? Login</a></div>
+    </div>
+</div>
+{% endblock %}
