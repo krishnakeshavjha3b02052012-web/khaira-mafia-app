@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant | Khaira Mafia HQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0b0c10; color: #c5c6c7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+        .navbar { background-color: #1f2833; border-bottom: 1px solid #45a29e; }
+        .chat-container { max-width: 800px; margin: 30px auto; flex: 1; display: flex; flex-direction: column; background: #1f2833; border: 1px solid #45a29e; border-radius: 12px; overflow: hidden; height: 75vh; }
+        .chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .bubble { max-width: 75%; padding: 12px 18px; border-radius: 15px; font-size: 0.95rem; }
+        .bot { background-color: #0b0c10; color: #66fcf1; border: 1px solid #45a29e; align-self: flex-start; }
+        .user { background-color: #45a29e; color: #0b0c10; align-self: flex-end; font-weight: 500; }
+        .input-bar { padding: 15px; background-color: #0b0c10; border-top: 1px solid #45a29e; display: flex; gap: 10px; }
+        .form-control { background-color: #1f2833; border: 1px solid #45a29e; color: #fff; }
+        .form-control:focus { background-color: #1f2833; color: #fff; border-color: #66fcf1; box-shadow: none; }
+        .btn-send { background-color: #66fcf1; color: #0b0c10; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark px-4">
+        <a class="navbar-brand text-info fw-bold" href="{{ url_for('index') }}"><i class="fa-solid fa-robot me-2"></i>HQ AI Assistant</a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-info btn-sm">Return to Portal</a>
+    </nav>
+
+    <div class="chat-container shadow-lg">
+        <div class="chat-box" id="chatBox">
+            <div class="bubble bot">
+                <strong><i class="fa-solid fa-robot me-1"></i> AI Assistant:</strong><br>
+                Greetings, {{ current_user.username }}. I am fully operational. Ask me about portal commands, team members, or games.
+            </div>
+        </div>
+        <div class="input-bar">
+            <input type="text" id="userInput" class="form-control" placeholder="Ask AI Assistant..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()" class="btn btn-send"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatBox = document.getElementById('chatBox');
+            
+            // Append User Message
+            chatBox.innerHTML += `
+                <div class="bubble user">
+                    <strong>You:</strong><br>${escapeHtml(message)}
+                </div>
+            `;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/api/ai-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                
+                // Append AI Response
+                chatBox.innerHTML += `
+                    <div class="bubble bot">
+                        <strong><i class="fa-solid fa-robot me-1"></i> AI Assistant:</strong><br>${escapeHtml(data.response)}
+                    </div>
+                `;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (err) {
+                chatBox.innerHTML += `
+                    <div class="bubble bot text-danger">
+                        <strong>System Error:</strong> Unable to communicate with AI endpoint.
+                    </div>
+                `;
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>
