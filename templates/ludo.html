@@ -1,61 +1,241 @@
-{% extends "base.html" %}
-{% block content %}
-<style>
-    .ludo-container { background-color: #0d1117; min-height: 85vh; border-radius: 15px; padding: 20px; }
-    .ludo-board { width: 420px; height: 420px; display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr); gap: 1px; background-color: #222; border: 8px solid #333; border-radius: 12px; margin: 0 auto; }
-    .base-red { grid-column: 1 / 7; grid-row: 1 / 7; background-color: #dc3545; }
-    .base-green { grid-column: 10 / 16; grid-row: 1 / 7; background-color: #198754; }
-    .base-yellow { grid-column: 10 / 16; grid-row: 10 / 16; background-color: #ffc107; }
-    .base-blue { grid-column: 1 / 7; grid-row: 10 / 16; background-color: #0d6efd; }
-    .center-home { grid-column: 7 / 10; grid-row: 7 / 10; background: conic-gradient(#dc3545 0 90deg, #198754 90deg 180deg, #ffc107 180deg 270deg, #0d6efd 270deg 360deg); }
-    .dice-display { font-size: 3rem; width: 80px; height: 80px; line-height: 80px; background-color: #1f2833; border: 2px solid #66fcf1; border-radius: 12px; margin: 0 auto; }
-</style>
-<div class="container-fluid ludo-container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="text-success mb-0">🎲 Khaira Mafia Ludo Arena</h3>
-        <div class="bg-dark p-2 rounded border border-secondary">Active Turn: <strong id="current-player" class="text-danger">Red Player</strong></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer Ludo King | Khaira Mafia HQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0b0c10; color: #c5c6c7; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; }
+        .ludo-header { background-color: #1f2833; border-bottom: 2px solid #45a29e; padding: 15px; }
+        .ludo-container { max-width: 1200px; margin: 20px auto; }
+        .board-wrapper { background: #1f2833; border: 2px solid #45a29e; border-radius: 15px; padding: 20px; box-shadow: 0 0 25px rgba(102,252,241,0.2); }
+        #ludoBoard { background: #fff; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.5); width: 100%; max-width: 600px; height: auto; display: block; margin: 0 auto; }
+        .game-controls { background: #1f2833; border: 1px solid #45a29e; border-radius: 12px; padding: 20px; }
+        .dice-box { width: 90px; height: 90px; background: #ffffff; color: #0b0c10; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: bold; margin: 0 auto; cursor: pointer; border: 4px solid #66fcf1; box-shadow: 0 0 15px rgba(102,252,241,0.5); transition: transform 0.2s; }
+        .dice-box:active { transform: scale(0.92); }
+        .player-badge { padding: 10px 15px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border: 2px solid transparent; }
+        .player-red { background: rgba(220, 53, 69, 0.2); color: #ff6b6b; border-color: #dc3545; }
+        .player-green { background: rgba(40, 167, 69, 0.2); color: #51cf66; border-color: #28a745; }
+        .player-yellow { background: rgba(255, 193, 7, 0.2); color: #fcc419; border-color: #ffc107; }
+        .player-blue { background: rgba(13, 110, 253, 0.2); color: #339af0; border-color: #0d6efd; }
+        .player-active { box-shadow: 0 0 12px currentColor; transform: scale(1.02); }
+        .btn-mode { background: #0b0c10; color: #66fcf1; border: 1px solid #45a29e; font-weight: 600; }
+        .btn-mode.active, .btn-mode:hover { background: #66fcf1; color: #0b0c10; }
+    </style>
+</head>
+<body>
+
+    <div class="ludo-header d-flex justify-content-between align-items-center px-4">
+        <h3 class="text-info m-0 fw-bold"><i class="fa-solid fa-gamepad me-2"></i>HQ Ludo King Arena</h3>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-info btn-sm"><i class="fa-solid fa-house me-1"></i> Exit Arena</a>
     </div>
-    <div class="row align-items-center my-3">
-        <div class="col-lg-8 text-center mb-4 mb-lg-0">
-            <div class="ludo-board">
-                <div class="base-red d-flex align-items-center justify-content-center">🔴🔴</div>
-                <div class="base-green d-flex align-items-center justify-content-center">🟢🟢</div>
-                <div class="center-home"></div>
-                <div class="base-blue d-flex align-items-center justify-content-center">🔵🔵</div>
-                <div class="base-yellow d-flex align-items-center justify-content-center">🟡🟡</div>
+
+    <div class="container-fluid ludo-container">
+        <div class="row g-4">
+            
+            <!-- Left Panel: Mode Selection & Player List -->
+            <div class="col-lg-4">
+                <div class="game-controls mb-4">
+                    <h5 class="text-info mb-3"><i class="fa-solid fa-users-gear me-2"></i>Select Game Mode</h5>
+                    <div class="d-grid gap-2 mb-3">
+                        <button class="btn btn-mode active" onclick="setMode('2P')">2 Players (1v1)</button>
+                        <button class="btn btn-mode" onclick="setMode('3P')">3 Players</button>
+                        <button class="btn btn-mode" onclick="setMode('4P')">4 Players (Classic)</button>
+                        <button class="btn btn-mode" onclick="setMode('2v2')">2v2 Team Battle</button>
+                    </div>
+                    <button class="btn btn-success w-100 fw-bold py-2" onclick="startNewGame()"><i class="fa-solid fa-play me-2"></i>Start Match</button>
+                </div>
+
+                <div class="game-controls">
+                    <h5 class="text-info mb-3"><i class="fa-solid fa-user-ninja me-2"></i>Active Match Roster</h5>
+                    <div id="playerList">
+                        <div class="player-badge player-red player-active" id="p-red">
+                            <span><i class="fa-solid fa-chess-pawn me-2"></i>Red ({{ current_user.username }})</span>
+                            <span class="badge bg-danger">Turn</span>
+                        </div>
+                        <div class="player-badge player-green" id="p-green">
+                            <span><i class="fa-solid fa-chess-pawn me-2"></i>Green (AI / Member)</span>
+                            <span class="badge bg-secondary">Waiting</span>
+                        </div>
+                        <div class="player-badge player-yellow d-none" id="p-yellow">
+                            <span><i class="fa-solid fa-chess-pawn me-2"></i>Yellow (Member)</span>
+                            <span class="badge bg-secondary">Waiting</span>
+                        </div>
+                        <div class="player-badge player-blue d-none" id="p-blue">
+                            <span><i class="fa-solid fa-chess-pawn me-2"></i>Blue (Member)</span>
+                            <span class="badge bg-secondary">Waiting</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="col-lg-4 text-center">
-            <div class="card bg-dark border-secondary p-4">
-                <h5 class="text-info mb-3">Operations Dice</h5>
-                <div id="dice-box" class="dice-display text-warning mb-3">🎲</div>
-                <button id="roll-btn" class="btn btn-success btn-lg w-100 fw-bold mb-3" onclick="rollDice()">🎲 ROLL DICE</button>
-                <div id="status-log" class="text-light small p-2 bg-black rounded border border-secondary">Red player rolls first.</div>
+
+            <!-- Center Panel: Interactive Ludo Board & Dice -->
+            <div class="col-lg-8">
+                <div class="board-wrapper text-center">
+                    <canvas id="ludoBoard" width="600" height="600"></canvas>
+                    
+                    <div class="mt-4 d-flex justify-content-center align-items-center gap-4">
+                        <div>
+                            <div class="dice-box" id="diceBox" onclick="rollDice()">
+                                <span id="diceValue">🎲</span>
+                            </div>
+                            <small class="text-muted d-block mt-2">Click Dice to Roll</small>
+                        </div>
+                        <div class="text-start">
+                            <h4 id="turnStatus" class="text-info fw-bold mb-1">Red's Turn</h4>
+                            <p id="gameLog" class="text-light mb-0 small">Roll dice to start the operation.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
-</div>
-<script>
-    const players = [{ name: 'Red Player', class: 'text-danger' }, { name: 'Green Player', class: 'text-success' }, { name: 'Yellow Player', class: 'text-warning' }, { name: 'Blue Player', class: 'text-primary' }];
-    const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-    let turnIndex = 0;
-    function rollDice() {
-        let rolls = 0;
-        const interval = setInterval(() => {
-            document.getElementById('dice-box').innerText = diceFaces[Math.floor(Math.random() * 6)];
-            rolls++;
-            if (rolls >= 10) {
-                clearInterval(interval);
-                const val = Math.floor(Math.random() * 6) + 1;
-                document.getElementById('dice-box').innerText = diceFaces[val - 1];
-                document.getElementById('status-log').innerText = `${players[turnIndex].name} rolled a ${val}!`;
-                if (val !== 6) {
-                    turnIndex = (turnIndex + 1) % players.length;
-                    document.getElementById('current-player').innerText = players[turnIndex].name;
-                    document.getElementById('current-player').className = players[turnIndex].class;
+
+    <script>
+        const canvas = document.getElementById('ludoBoard');
+        const ctx = canvas.getContext('2d');
+        let currentMode = '2P';
+        let currentTurn = 'red'; // red, green, yellow, blue
+        let diceRoll = 0;
+        let canRoll = true;
+
+        // Colors Configuration
+        const colors = {
+            red: '#dc3545',
+            green: '#28a745',
+            yellow: '#ffc107',
+            blue: '#0d6efd',
+            white: '#ffffff',
+            border: '#2c3e50'
+        };
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.btn-mode').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('p-yellow').classList.toggle('d-none', mode === '2P');
+            document.getElementById('p-blue').classList.toggle('d-none', mode === '2P' || mode === '3P');
+            
+            startNewGame();
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const tileSize = 600 / 15;
+
+            // Draw Quadrants (Yards)
+            drawYard(0, 0, colors.red);
+            drawYard(9 * tileSize, 0, colors.green);
+            drawYard(0, 9 * tileSize, colors.blue);
+            drawYard(9 * tileSize, 9 * tileSize, colors.yellow);
+
+            // Draw Paths
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 1;
+
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    if ((r < 6 || r > 8) && (c < 6 || c > 8)) continue; // Skip Yards
+
+                    // Home Run Tracks
+                    if (r === 7 && c > 0 && c < 6) ctx.fillStyle = colors.red;
+                    else if (c === 7 && r > 0 && r < 6) ctx.fillStyle = colors.green;
+                    else if (r === 7 && c > 8 && c < 14) ctx.fillStyle = colors.yellow;
+                    else if (c === 7 && r > 8 && r < 14) ctx.fillStyle = colors.blue;
+                    // Starting Points
+                    else if (r === 6 && c === 1) ctx.fillStyle = colors.red;
+                    else if (r === 1 && c === 8) ctx.fillStyle = colors.green;
+                    else if (r === 8 && c === 13) ctx.fillStyle = colors.yellow;
+                    else if (r === 13 && c === 6) ctx.fillStyle = colors.blue;
+                    else ctx.fillStyle = colors.white;
+
+                    ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                    ctx.strokeRect(c * tileSize, r * tileSize, tileSize, tileSize);
                 }
             }
-        }, 80);
-    }
-</script>
-{% endblock %}
+
+            // Draw Center Home Triangles
+            drawCenterHome(tileSize);
+        }
+
+        function drawYard(x, y, color) {
+            const size = 6 * (600 / 15);
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, size, size);
+            ctx.fillStyle = colors.white;
+            ctx.fillRect(x + 40, y + 40, size - 80, size - 80);
+
+            // Draw Tokens in Yard
+            const tokenCoords = [
+                [x + 70, y + 70], [x + size - 70, y + 70],
+                [x + 70, y + size - 70], [x + size - 70, y + size - 70]
+            ];
+
+            tokenCoords.forEach(pt => {
+                ctx.beginPath();
+                ctx.arc(pt[0], pt[1], 18, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+            });
+        }
+
+        function drawCenterHome(s) {
+            const cx = 7.5 * s, cy = 7.5 * s;
+            
+            ctx.beginPath(); ctx.moveTo(6 * s, 6 * s); ctx.lineTo(cx, cy); ctx.lineTo(6 * s, 9 * s); ctx.fillStyle = colors.red; ctx.fill();
+            ctx.beginPath(); ctx.moveTo(6 * s, 6 * s); ctx.lineTo(cx, cy); ctx.lineTo(9 * s, 6 * s); ctx.fillStyle = colors.green; ctx.fill();
+            ctx.beginPath(); ctx.moveTo(9 * s, 6 * s); ctx.lineTo(cx, cy); ctx.lineTo(9 * s, 9 * s); ctx.fillStyle = colors.yellow; ctx.fill();
+            ctx.beginPath(); ctx.moveTo(6 * s, 9 * s); ctx.lineTo(cx, cy); ctx.lineTo(9 * s, 9 * s); ctx.fillStyle = colors.blue; ctx.fill();
+        }
+
+        function rollDice() {
+            if (!canRoll) return;
+            canRoll = false;
+
+            const diceElem = document.getElementById('diceValue');
+            let rolls = 0;
+            const interval = setInterval(() => {
+                diceRoll = Math.floor(Math.random() * 6) + 1;
+                diceElem.textContent = diceRoll;
+                rolls++;
+                if (rolls > 10) {
+                    clearInterval(interval);
+                    document.getElementById('gameLog').textContent = `${currentTurn.toUpperCase()} rolled a ${diceRoll}!`;
+                    nextTurn();
+                }
+            }, 60);
+        }
+
+        function nextTurn() {
+            const order = currentMode === '2P' ? ['red', 'green'] : currentMode === '3P' ? ['red', 'green', 'yellow'] : ['red', 'green', 'yellow', 'blue'];
+            let idx = order.indexOf(currentTurn);
+            currentTurn = order[(idx + 1) % order.length];
+
+            document.querySelectorAll('.player-badge').forEach(b => b.classList.remove('player-active'));
+            const activeBadge = document.getElementById(`p-${currentTurn}`);
+            if (activeBadge) activeBadge.classList.add('player-active');
+
+            document.getElementById('turnStatus').textContent = `${currentTurn.toUpperCase()}'s Turn`;
+            canRoll = true;
+        }
+
+        function startNewGame() {
+            currentTurn = 'red';
+            canRoll = true;
+            document.getElementById('turnStatus').textContent = "Red's Turn";
+            document.getElementById('gameLog').textContent = "Game started! Roll dice to play.";
+            drawBoard();
+        }
+
+        // Initialize Board on Load
+        drawBoard();
+    </script>
+</body>
+</html>
