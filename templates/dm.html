@@ -1,80 +1,144 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block content %}
-<div class="container-fluid" style="max-width: 1000px;">
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="card bg-dark border-secondary">
-                <div class="card-header border-secondary text-info fw-bold">👥 Direct Messages</div>
-                <div class="list-group list-group-flush bg-dark">
-                    {% for u in users %}
-                        <a href="{{ url_for('private_chat', user_id=u.id) }}" class="list-group-item list-group-item-action bg-dark text-light border-secondary d-flex justify-content-between align-items-center {% if active_recipient and active_recipient.id == u.id %}active bg-secondary{% endif %}">
-                            <div><strong>{{ u.username }}</strong><br><small class="text-muted">{{ u.role }}</small></div>
-                            <span class="badge bg-success rounded-circle p-1">●</span>
-                        </a>
-                    {% else %}
-                        <div class="p-3 text-muted">No other members online.</div>
-                    {% endfor %}
-                </div>
+<div class="container-fluid py-2">
+    <div class="row g-2" style="height: 82vh;">
+        <!-- Sidebar User List -->
+        <div class="col-md-4 col-lg-3 bg-dark border border-secondary rounded p-3 overflow-auto">
+            <h5 class="text-warning mb-3"><i class="bi bi-chat-square-text-fill"></i> Members</h5>
+            <div class="list-group">
+                {% for u in users %}
+                    <a href="{{ url_for('private_chat', user_id=u.id) }}" class="list-group-item list-group-item-action bg-dark text-light border-secondary d-flex justify-content-between align-items-center {% if active_recipient and active_recipient.id == u.id %}active bg-secondary{% endif %}">
+                        <span><i class="bi bi-person-circle text-info me-2"></i>{{ u.username }}</span>
+                        <i class="bi bi-chevron-right small text-muted"></i>
+                    </a>
+                {% endfor %}
             </div>
         </div>
-        <div class="col-md-8">
-            <div class="card bg-dark border-secondary">
-                {% if active_recipient %}
-                    <div class="card-header border-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <h5 class="mb-0 text-light">🔒 Chat with <span class="text-info">{{ active_recipient.username }}</span></h5>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <label for="fontSelector" class="text-muted small fw-bold mb-0">Font:</label>
-                            <select id="fontSelector" class="form-select form-select-sm bg-dark text-warning border-secondary w-auto" onchange="changeGroupFont(this.value)">
-                                <option value="'Inter', sans-serif">Modern Sans</option>
-                                <option value="'Fira Code', monospace">Dev Monospace</option>
-                                <option value="'Playfair Display', serif">Classic Serif</option>
-                                <option value="'Grandstander', cursive">Casual Playful</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="card-body overflow-auto p-3" id="chat-box" style="height: 420px; background-color: #121212;">
-                        {% for msg in messages %}
-                            <div class="d-flex justify-content-{% if msg.sender_id == current_user.id %}end{% else %}start{% endif %} mb-3">
-                                <div class="bg-{% if msg.sender_id == current_user.id %}primary{% else %}secondary{% endif %} text-white p-2 px-3 rounded-3" style="max-width: 75%;">
-                                    <div>{{ msg.content }}</div>
-                                    <div class="text-end" style="font-size: 0.7rem; opacity: 0.8;">{{ msg.timestamp.strftime('%H:%M') }}</div>
-                                </div>
+
+        <!-- Direct Message Window -->
+        <div class="col-md-8 col-lg-9 d-flex flex-column bg-dark border border-secondary rounded p-3">
+            {% if active_recipient %}
+                <div class="pb-2 mb-3 border-bottom border-secondary d-flex align-items-center justify-content-between">
+                    <h5 class="text-info m-0"><i class="bi bi-person-fill text-warning"></i> {{ active_recipient.username }}</h5>
+                    <span class="badge bg-success"><i class="bi bi-shield-check"></i> Encrypted Direct Channel</span>
+                </div>
+
+                <!-- Chat Feed -->
+                <div class="flex-grow-1 overflow-auto d-flex flex-column mb-3 p-2 border border-secondary rounded bg-black bg-opacity-25" id="chatFeed">
+                    {% for msg in messages %}
+                        <div class="chat-bubble {% if msg.sender_id == current_user.id %}chat-bubble-sent{% else %}chat-bubble-received{% endif %}">
+                            <div class="small fw-bold text-warning mb-1">{{ msg.sender.username }}</div>
+                            <div>
+                                {% if msg.content.startswith('data:image') or msg.content.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                                    <img src="{{ msg.content }}" class="img-fluid rounded my-1" style="max-height: 250px;">
+                                {% elif msg.content.startswith('data:audio') %}
+                                    <audio controls class="w-100 my-1"><source src="{{ msg.content }}"></audio>
+                                {% else %}
+                                    {{ msg.content }}
+                                {% endif %}
                             </div>
-                        {% else %}
-                            <div class="text-center text-muted my-5">🔒 Encrypted Direct Channel Opened. Send a message to start conversation.</div>
-                        {% endfor %}
+                            <div class="text-end text-white-50" style="font-size: 0.7rem;">{{ msg.timestamp.strftime('%H:%M') if msg.timestamp else '' }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- WhatsApp-Style Media Toolbar & Form -->
+                <emoji-picker id="emojiPicker"></emoji-picker>
+
+                <form action="{{ url_for('private_chat', user_id=active_recipient.id) }}" method="POST" id="dmForm">
+                    <div class="input-group gap-1">
+                        <button class="btn btn-outline-secondary text-light" type="button" id="emojiBtn"><i class="bi bi-emoji-smile-fill text-warning"></i></button>
+                        <button class="btn btn-outline-secondary text-light" type="button" onclick="document.getElementById('fileInput').click()"><i class="bi bi-paperclip text-info"></i></button>
+                        <button class="btn btn-outline-secondary text-light" type="button" id="gifBtn"><i class="bi bi-filetype-gif text-success"></i></button>
+                        <button class="btn btn-outline-danger" type="button" id="recordBtn"><i class="bi bi-mic-fill"></i></button>
+                        
+                        <input type="file" id="fileInput" style="display: none;" accept="image/*">
+                        <input type="text" name="message" id="messageInput" class="form-control bg-dark text-light border-secondary" placeholder="Type a message..." autocomplete="off">
+                        <button class="btn btn-info fw-bold" type="submit"><i class="bi bi-send-fill"></i></button>
                     </div>
-                    <div class="card-footer border-secondary">
-                        <form action="{{ url_for('private_chat', user_id=active_recipient.id) }}" method="POST">
-                            <div class="input-group">
-                                <input type="text" name="message" class="form-control bg-dark text-light border-secondary" placeholder="Type a private message..." required autocomplete="off">
-                                <button class="btn btn-info fw-bold" type="submit">Send 🔒</button>
-                            </div>
-                        </form>
-                    </div>
-                {% else %}
-                    <div class="card-body text-center text-muted my-5">👈 Select a member from the list to start a 1-on-1 private chat.</div>
-                {% endif %}
-            </div>
+                </form>
+            {% else %}
+                <div class="text-center my-auto text-muted">
+                    <i class="bi bi-chat-left-dots display-1"></i>
+                    <p class="mt-2">Select a member from the sidebar to start direct messaging.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
+
 <script>
-    function changeGroupFont(selectedFont) {
-        const chatBox = document.getElementById('chat-box');
-        if (chatBox) chatBox.style.fontFamily = selectedFont;
-        localStorage.setItem('preferredGroupFont', selectedFont);
+    // Auto-scroll chat feed to bottom
+    const chatFeed = document.getElementById('chatFeed');
+    if (chatFeed) chatFeed.scrollTop = chatFeed.scrollHeight;
+
+    // Emoji Picker Toggle
+    const emojiBtn = document.getElementById('emojiBtn');
+    const emojiPicker = document.getElementById('emojiPicker');
+    const messageInput = document.getElementById('messageInput');
+    if (emojiBtn) {
+        emojiBtn.addEventListener('click', () => {
+            emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
+        });
+        emojiPicker.addEventListener('emoji-click', event => {
+            messageInput.value += event.detail.unicode;
+        });
     }
-    document.addEventListener('DOMContentLoaded', () => {
-        const chatBox = document.getElementById('chat-box');
-        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-        const savedFont = localStorage.getItem('preferredGroupFont');
-        if (savedFont) {
-            if (document.getElementById('fontSelector')) document.getElementById('fontSelector').value = savedFont;
-            changeGroupFont(savedFont);
-        }
-    });
+
+    // Attachment Image Handling (Converts image to Base64)
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    messageInput.value = evt.target.result;
+                    document.getElementById('dmForm').submit();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // GIF Quick Picker Prompt
+    const gifBtn = document.getElementById('gifBtn');
+    if (gifBtn) {
+        gifBtn.addEventListener('click', () => {
+            const gifUrl = prompt("Enter GIF Image URL:");
+            if (gifUrl) {
+                messageInput.value = gifUrl;
+                document.getElementById('dmForm').submit();
+            }
+        });
+    }
+
+    // Voice Note Recorder (MediaRecorder Web API)
+    const recordBtn = document.getElementById('recordBtn');
+    let mediaRecorder, audioChunks = [];
+    if (recordBtn) {
+        recordBtn.addEventListener('click', async () => {
+            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        messageInput.value = evt.target.result;
+                        document.getElementById('dmForm').submit();
+                    };
+                    reader.readAsDataURL(audioBlob);
+                };
+                mediaRecorder.start();
+                recordBtn.classList.replace('btn-outline-danger', 'btn-danger');
+            } else {
+                mediaRecorder.stop();
+                recordBtn.classList.replace('btn-danger', 'btn-outline-danger');
+            }
+        });
+    }
 </script>
 {% endblock %}
