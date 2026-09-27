@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-3" style="height: 85vh; display: flex; flex-direction: column;">
+    <h3 class="text-warning mb-3"><i class="bi bi-people-fill"></i> Khaira Mafia HQ Public Chat</h3>
+    
+    <!-- Chat Messages Window -->
+    <div class="flex-grow-1 overflow-auto border border-secondary rounded p-3 bg-dark mb-3 d-flex flex-column" id="groupFeed">
+        {% for msg in messages %}
+            <div class="chat-bubble {% if msg.user_id == current_user.id %}chat-bubble-sent{% else %}chat-bubble-received{% endif %}">
+                <div class="small fw-bold text-info mb-1">{{ msg.user.username }}</div>
+                <div>
+                    {% if msg.content.startswith('data:image') or msg.content.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                        <img src="{{ msg.content }}" class="img-fluid rounded my-1" style="max-height: 250px;">
+                    {% elif msg.content.startswith('data:audio') %}
+                        <audio controls class="w-100 my-1"><source src="{{ msg.content }}"></audio>
+                    {% else %}
+                        {{ msg.content }}
+                    {% endif %}
+                </div>
+                <div class="text-end text-white-50" style="font-size: 0.7rem;">{{ msg.timestamp.strftime('%H:%M') if msg.timestamp else '' }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Input Form -->
+    <emoji-picker id="groupEmojiPicker"></emoji-picker>
+
+    <form method="POST" id="groupForm" class="d-flex gap-2">
+        <button class="btn btn-outline-secondary text-light" type="button" id="groupEmojiBtn"><i class="bi bi-emoji-smile-fill text-warning"></i></button>
+        <button class="btn btn-outline-secondary text-light" type="button" onclick="document.getElementById('groupFileInput').click()"><i class="bi bi-paperclip text-info"></i></button>
+        <button class="btn btn-outline-danger" type="button" id="groupRecordBtn"><i class="bi bi-mic-fill"></i></button>
+        
+        <input type="file" id="groupFileInput" style="display: none;" accept="image/*">
+        <input type="text" name="content" id="groupInput" class="form-control bg-dark text-light border-secondary" placeholder="Broadcast to HQ..." required autocomplete="off">
+        <button type="submit" class="btn btn-warning fw-bold">Send</button>
+    </form>
+</div>
+
+<script>
+    const groupFeed = document.getElementById('groupFeed');
+    if (groupFeed) groupFeed.scrollTop = groupFeed.scrollHeight;
+
+    const groupEmojiBtn = document.getElementById('groupEmojiBtn');
+    const groupEmojiPicker = document.getElementById('groupEmojiPicker');
+    const groupInput = document.getElementById('groupInput');
+    if (groupEmojiBtn) {
+        groupEmojiBtn.addEventListener('click', () => {
+            groupEmojiPicker.style.display = groupEmojiPicker.style.display === 'block' ? 'none' : 'block';
+        });
+        groupEmojiPicker.addEventListener('emoji-click', e => {
+            groupInput.value += e.detail.unicode;
+        });
+    }
+
+    const groupFileInput = document.getElementById('groupFileInput');
+    if (groupFileInput) {
+        groupFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    groupInput.value = evt.target.result;
+                    document.getElementById('groupForm').submit();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+</script>
+{% endblock %}

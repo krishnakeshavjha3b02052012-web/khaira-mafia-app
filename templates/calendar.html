@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-3">
+    <h2 class="text-info mb-4"><i class="bi bi-calendar-event-fill"></i> Team Event Calendar</h2>
+    <form method="POST" class="row g-2 mb-4">
+        <div class="col-md-5">
+            <input type="text" name="title" class="form-control bg-dark text-light border-secondary" placeholder="Event Title" required>
+        </div>
+        <div class="col-md-5">
+            <input type="date" name="event_date" class="form-control bg-dark text-light border-secondary" required>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-info w-100 fw-bold">Add Event</button>
+        </div>
+    </form>
+    <ul class="list-group">
+        {% for event in events %}
+            <li class="list-group-item bg-dark text-light border-secondary d-flex justify-content-between align-items-center">
+                <span><strong class="text-warning">{{ event.event_date }}</strong>: {{ event.title }}</span>
+                <span class="badge bg-secondary">By {{ event.created_by }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
